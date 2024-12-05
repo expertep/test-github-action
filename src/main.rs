@@ -1,22 +1,24 @@
-use actix_web::{get, post, web, App, HttpServer, HttpResponse, Responder};
-use serde::Deserialize;
+use actix_web::{get, App, HttpServer, HttpResponse, Responder};
+use dotenv::dotenv; // Import dotenv
+use std::env; // Import env
 
 #[get("/")]
 async fn hello() -> impl Responder {
-    HttpResponse::Ok().body("Welcome to Actix-Web!")
+    dotenv().ok();  // Load the .env file
+    
+    // Get the environment variable "ENV", or use a default if not set
+    let env = env::var("ENV").unwrap_or_else(|_| "development".to_string());
+    let endpoint = env::var("ENDPOINT").unwrap_or_else(|_| "localhost".to_string());
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+
+    // Return the formatted response including environment details
+    HttpResponse::Ok().body(format!(
+        "Server is running on environment: {}, endpoint: {}, port: {}",
+        env, endpoint, port
+    ))
 }
 
-#[derive(Deserialize)]
-struct Info {
-    name: String,
-    age: u8,
-}
 
-#[post("/echo")]
-async fn echo(info: web::Json<Info>) -> impl Responder {
-    let response = format!("Hello, {}! You are {} years old.", info.name, info.age);
-    HttpResponse::Ok().body(response)
-}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -24,10 +26,9 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(|| {
         App::new()
-            .service(hello)
-            .service(echo)
+            .service(hello) // Register the hello handler
     })
-    .bind("127.0.0.1:8080")?
+    .bind("127.0.0.1:8080")?  // Bind to localhost:8080
     .run()
     .await
 }

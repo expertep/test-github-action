@@ -7,13 +7,16 @@ WORKDIR /usr/src/app
 # Copy the Cargo files first (to cache dependencies)
 COPY Cargo.toml Cargo.lock ./
 
-# Create an empty "src" directory to allow dependency resolution
+# Pre-fetch dependencies to cache them
+RUN cargo fetch
+
+# Create an empty "src" directory to allow dependency resolution and to build the initial stage
 RUN mkdir src && echo "// Temporary file" > src/main.rs
 
-# Pre-fetch dependencies
+# Build the application dependencies (no actual code) to cache them
 RUN cargo build --release && rm -rf src
 
-# Copy the actual source code
+# Now copy the actual source code
 COPY . .
 
 # Build the application in release mode
@@ -22,12 +25,12 @@ RUN cargo build --release
 # Create a smaller final image
 FROM debian:bullseye-slim
 
-# Install necessary dependencies
+# Install necessary runtime dependencies (e.g., OpenSSL)
 RUN apt-get update && apt-get install -y \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
+# Set the working directory for the final image
 WORKDIR /usr/src/app
 
 # Copy the compiled binary from the builder stage
