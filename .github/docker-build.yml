@@ -1,0 +1,46 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the code
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # Set up Docker Buildx
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    # Log in to Docker Hub or other container registry (set secrets for auth)
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    # Extract the commit ID
+    - name: Extract Commit ID
+      id: vars
+      run: echo "COMMIT_ID=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+
+    # Build and push the Docker image
+    - name: Build and Push Docker Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: rust-demo:${{ env.COMMIT_ID }}
+
+    # Verify the container can run (optional)
+    - name: Run Container (Test)
+      run: |
+        docker run -d -p 8080:8080 rust-demo:${{ env.COMMIT_ID }}
+        sleep 5 # Wait for the container to start
+        curl http://localhost:8080 || exit 1

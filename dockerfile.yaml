@@ -1,0 +1,34 @@
+# Use the official Rust image as the base image
+FROM rust:1.73 AS builder
+
+# Set the working directory inside the container
+WORKDIR /usr/src/app
+
+# Copy the Cargo.toml and Cargo.lock to the working directory
+COPY Cargo.toml Cargo.lock ./
+
+# Copy the source code into the container
+COPY src ./src
+
+# Pre-fetch dependencies to speed up the build process
+RUN cargo build --release
+
+# Create a minimal image for production
+FROM debian:bullseye-slim
+
+# Install required dependencies
+RUN apt-get update && apt-get install -y \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy the compiled binary from the builder stage
+COPY --from=builder /usr/src/app/target/release/your_project_name .
+
+# Expose the port your app runs on
+EXPOSE 3000
+
+# Command to run the binary
+CMD ["./your_project_name"]
