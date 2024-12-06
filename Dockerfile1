@@ -1,0 +1,45 @@
+# Use the official Rust image as the builder
+FROM rust:1.73 AS builder
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Copy the Cargo files first (to cache dependencies)
+COPY Cargo.toml Cargo.lock ./
+
+# Now copy the actual source code
+# COPY . .
+
+# Pre-fetch dependencies to cache them
+RUN cargo fetch
+
+# Create an empty "src" directory to allow dependency resolution and to build the initial stage
+# RUN mkdir src && echo "// Temporary file" > src/main.rs
+
+# Build the application dependencies (no actual code) to cache them
+# RUN cargo build --release && rm -rf src
+
+
+
+# Build the application in release mode
+RUN cargo build --release
+
+# Create a smaller final image
+FROM debian:bullseye-slim
+
+# Install necessary runtime dependencies (e.g., OpenSSL)
+RUN apt-get update && apt-get install -y \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set the working directory for the final image
+WORKDIR /usr/src/app
+
+# Copy the compiled binary from the builder stage
+COPY --from=builder /usr/src/app/target/release/actix_web_service .
+
+# Expose the application port
+EXPOSE 8080
+
+# Run the application
+CMD ["./actix_web_service"]

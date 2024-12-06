@@ -1,43 +1,37 @@
-# Use the official Rust image as the builder
-FROM rust:1.73 AS builder
-
-# Set the working directory
-WORKDIR /usr/src/app
-
-# Copy the Cargo files first (to cache dependencies)
-COPY Cargo.toml Cargo.lock ./
-
-# Pre-fetch dependencies to cache them
-RUN cargo fetch
-
-# Create an empty "src" directory to allow dependency resolution and to build the initial stage
-RUN mkdir src && echo "// Temporary file" > src/main.rs
-
-# Build the application dependencies (no actual code) to cache them
-RUN cargo build --release && rm -rf src
-
-# Now copy the actual source code
-COPY . .
-
-# Build the application in release mode
-RUN cargo build --release
-
-# Create a smaller final image
-FROM debian:bullseye-slim
-
-# Install necessary runtime dependencies (e.g., OpenSSL)
+# Stage 1: Build
+# FROM rust:alpine AS builder
+FROM rust:1.73-slim AS builder
+# Install necessary development tools
 RUN apt-get update && apt-get install -y \
+    build-essential \
     libssl-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory for the final image
-WORKDIR /usr/src/app
+# Set the working directory
+WORKDIR /app
 
-# Copy the compiled binary from the builder stage
-COPY --from=builder /usr/src/app/target/release/actix_web_service .
+# Copy the project files
+COPY . .
 
-# Expose the application port
+RUN cargo check
+RUN cargo test
+
+RUN cargo fetch
+# Build the project in release mode
+RUN cargo build --release
+
+# Stage 2: Runtime
+FROM debian:bookworm-slim
+
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the built binary from the builder stage
+COPY --from=builder /app/target/release/test-github-action .
+
 EXPOSE 8080
-
-# Run the application
-CMD ["./actix_web_service"]
+# Set the default command
+CMD ["./test-github-action"]
+# CMD ["ls"]
