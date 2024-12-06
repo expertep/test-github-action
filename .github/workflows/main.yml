@@ -41,6 +41,6 @@ jobs:
     # Verify the container can run (optional)
     - name: Run Container (Test)
       run: |
-        docker run -d -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/rust-demo:${{ github.sha }}
+        docker run -d -p 8080:8080 -e PORT=8080 ${{ secrets.DOCKER_USERNAME }}/rust-demo:${{ github.sha }}
         sleep 5 # Wait for the container to start
         curl http://localhost:8080 || exit 1
