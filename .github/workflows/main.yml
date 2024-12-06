@@ -36,11 +36,11 @@ jobs:
       with:
         context: .
         push: true
-        tags: rust-demo:${{ env.COMMIT_ID }}
+        tags: ${{ secrets.DOCKER_USERNAME }}/rust-demo:${{ github.sha }}
 
     # Verify the container can run (optional)
     - name: Run Container (Test)
       run: |
-        docker run -d -p 8080:8080 rust-demo:${{ env.COMMIT_ID }}
+        docker run -d -p 8080:8080 rust-demo:${{ github.sha }}
         sleep 5 # Wait for the container to start
         curl http://localhost:8080 || exit 1
